@@ -539,43 +539,45 @@ func (c *dbzCodec) writeDebeziumFieldValue(
 		return nil
 
 	case mysql.TypeEnum:
-		switch v := value.(type) {
-		case uint64:
-			enumVar, err := types.ParseEnumValue(ft.GetElems(), v)
-			if err != nil {
-				// Invalid enum value inserted in non-strict mode.
-				writer.WriteStringField(col.GetName(), "")
-				return nil
-			}
-			writer.WriteStringField(col.GetName(), enumVar.Name)
-		case string:
-			writer.WriteStringField(col.GetName(), v)
-		default:
+		// REVERTED FOR TESTING: This code does NOT handle string type values
+		// When enum column has DEFAULT value and NULL is inserted, value comes as string
+		// This will trigger error: "unexpected column value type string for enum column"
+		// Fixed in PR #12475: https://github.com/pingcap/tiflow/pull/12475
+		v, ok := value.(uint64)
+		if !ok {
 			return cerror.ErrDebeziumEncodeFailed.GenWithStack(
 				"unexpected column value type %T for enum column %s",
 				value,
 				col.GetName())
 		}
+		enumVar, err := types.ParseEnumValue(ft.GetElems(), v)
+		if err != nil {
+			// Invalid enum value inserted in non-strict mode.
+			writer.WriteStringField(col.GetName(), "")
+			return nil
+		}
+		writer.WriteStringField(col.GetName(), enumVar.Name)
 		return nil
 
 	case mysql.TypeSet:
-		switch v := value.(type) {
-		case uint64:
-			setVar, err := types.ParseSetValue(ft.GetElems(), v)
-			if err != nil {
-				// Invalid enum value inserted in non-strict mode.
-				writer.WriteStringField(col.GetName(), "")
-				return nil
-			}
-			writer.WriteStringField(col.GetName(), setVar.Name)
-		case string:
-			writer.WriteStringField(col.GetName(), v)
-		default:
+		// REVERTED FOR TESTING: This code does NOT handle string type values
+		// When set column has DEFAULT value and NULL is inserted, value comes as string
+		// This will trigger error: "unexpected column value type string for set column"
+		// Fixed in PR #12475: https://github.com/pingcap/tiflow/pull/12475
+		v, ok := value.(uint64)
+		if !ok {
 			return cerror.ErrDebeziumEncodeFailed.GenWithStack(
 				"unexpected column value type %T for set column %s",
 				value,
 				col.GetName())
 		}
+		setVar, err := types.ParseSetValue(ft.GetElems(), v)
+		if err != nil {
+			// Invalid set value inserted in non-strict mode.
+			writer.WriteStringField(col.GetName(), "")
+			return nil
+		}
+		writer.WriteStringField(col.GetName(), setVar.Name)
 		return nil
 
 	case mysql.TypeNewDecimal:
